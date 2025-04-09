@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Xml;
 using System.Xml.Schema;
+using Npgsql;
 
 class Program
 {
@@ -31,6 +32,9 @@ class Program
         XmlDocument document = new XmlDocument();
         document.Load(reader);
         document.Validate(ValidationEventHandler);
+        
+        // Обработка XML и сохранение данных в БД
+        SaveCadNumbersToDatabase(document);
     }
 
     static void ValidationEventHandler(object sender, ValidationEventArgs e)
@@ -42,6 +46,36 @@ class Program
         else if (e.Severity == XmlSeverityType.Warning)
         {
             Console.WriteLine("Warning: {0}", e.Message);
+        }
+    }
+    
+    static void SaveCadNumbersToDatabase(XmlDocument document)
+    {
+        string connectionString = "Host=localhost;Username=postgres;Password=nik09012002;Database=etl"; // Укажите свои данные для подключения
+
+        using (var connection = new NpgsqlConnection(connectionString))
+        {
+            connection.Open();
+
+            var namespaceManager = new XmlNamespaceManager(new NameTable());
+            // namespaceManager.AddNamespace("", ""); // Замените на нужный вам namespace, если это необходимо
+
+            var cadBlocks = document.SelectNodes("//land_records/land_record", namespaceManager);
+            foreach (XmlNode cadBlock in cadBlocks)
+            {
+                var cadNumberNode = cadBlock.SelectSingleNode("object/common_data/cad_number", namespaceManager);
+                if (cadNumberNode != null)
+                {
+                    var cadNumber = cadNumberNode.InnerText;
+
+                    // Сохранение в БД
+                    using (var cmd = new NpgsqlCommand("INSERT INTO registry.land_plot (cad_number) VALUES (@cad_number)", connection))
+                    {
+                        cmd.Parameters.AddWithValue("cad_number", cadNumber);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
         }
     }
 }

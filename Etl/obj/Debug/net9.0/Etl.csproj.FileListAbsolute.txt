@@ -12,3 +12,4 @@ D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\refint\Etl.dll
 D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.pdb
 D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.genruntimeconfig.cache
 D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\ref\Etl.dll
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.sourcelink.json
