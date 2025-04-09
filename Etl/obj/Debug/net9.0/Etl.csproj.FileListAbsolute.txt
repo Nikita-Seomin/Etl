@@ -1,0 +1,14 @@
+D:\Работа\dev\Etl\Etl\bin\Debug\net9.0\Etl.exe
+D:\Работа\dev\Etl\Etl\bin\Debug\net9.0\Etl.deps.json
+D:\Работа\dev\Etl\Etl\bin\Debug\net9.0\Etl.runtimeconfig.json
+D:\Работа\dev\Etl\Etl\bin\Debug\net9.0\Etl.dll
+D:\Работа\dev\Etl\Etl\bin\Debug\net9.0\Etl.pdb
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.GeneratedMSBuildEditorConfig.editorconfig
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.AssemblyInfoInputs.cache
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.AssemblyInfo.cs
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.csproj.CoreCompileInputs.cache
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.dll
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\refint\Etl.dll
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.pdb
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\Etl.genruntimeconfig.cache
+D:\Работа\dev\Etl\Etl\obj\Debug\net9.0\ref\Etl.dll
