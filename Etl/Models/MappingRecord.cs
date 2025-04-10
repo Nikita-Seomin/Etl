@@ -1,0 +1,10 @@
+﻿namespace Etl.Models
+{
+    public class MappingRecord
+    {
+        public int Id { get; set; }
+        public string SourceColumn { get; set; }
+        public string ElementTypeId { get; set; }
+        public int? ParentId { get; set; }
+    }
+}
