@@ -52,7 +52,7 @@ namespace Etl.Data
             using (var connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
-                using (var command = new NpgsqlCommand("SELECT id, source_column,element_type_id, parent_id FROM etl_editor.mappings WHERE task_id = 216", connection))
+                using (var command = new NpgsqlCommand($"SELECT id, source_column,element_type_id, parent_id FROM etl_editor.mappings WHERE task_id = {_connectionParams.TaskId}", connection))
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())

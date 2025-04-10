@@ -2,6 +2,7 @@
 {
     public class DbConnectionParams
     {
+        public int TaskId { get; set; }
         public string Host { get; set; }
         public int Port { get; set; }
         public string Username { get; set; }
