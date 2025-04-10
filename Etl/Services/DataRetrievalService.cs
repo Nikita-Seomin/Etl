@@ -2,6 +2,7 @@
 using Etl.Data;
 using Etl.DataStructures.Forest;
 using Etl.DataStructures.Tree;
+using Etl.Models;
 using Forestry;
 
 namespace Etl.Services
@@ -15,12 +16,12 @@ namespace Etl.Services
             _dbConnectionParams = dbConnectionParams;
         }
 
-        public Forest<int, string> BuildForest()
+        public Forest<int, MappingRecord> BuildForest()
         {
             using (var dbContext = new DbContext(_dbConnectionParams))
             {
                 var records = dbContext.GetMappingRecords();
-                var forest = new Forest<int, string>();
+                var forest = new Forest<int, MappingRecord>();
                 Dictionary<int, int?> rootParents = new Dictionary<int, int?>();
 
                 foreach (var record in records)
@@ -28,7 +29,7 @@ namespace Etl.Services
                     // Создаем новое дерево для данного массива и добавляем его в лес
                     if (record.ElementTypeId == "array")
                     {
-                        var tree = new Tree<int, string>(record.Id, record.SourceColumn); // Используем Id как корень дерева
+                        var tree = new Tree<int, MappingRecord>(record.Id, record); // Используем Id как корень дерева
                         forest.AddTree(tree);
                         rootParents.Add(record.Id, record.ParentId);
                     }
@@ -46,7 +47,7 @@ namespace Etl.Services
                             if (parentNode != null) // если в текущем дереве нет нужной ноды = null
                             {
                                 // Добавляем текущую запись как дочерний узел к найденному родителю
-                                tree.AddChild(parentNode, record.Id, record.SourceColumn);
+                                tree.AddChild(parentNode, record.Id, record);
                                 break; // Можно выйти из цикла, так как мы добавили запись
                             }
                         }

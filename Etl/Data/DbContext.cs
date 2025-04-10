@@ -52,7 +52,19 @@ namespace Etl.Data
             using (var connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
-                using (var command = new NpgsqlCommand($"SELECT id, source_column,element_type_id, parent_id FROM etl_editor.mappings WHERE task_id = {_connectionParams.TaskId}", connection))
+                using (var command = new NpgsqlCommand($"""
+                                                                SELECT 
+                                                                    id, 
+                                                                    source_column,
+                                                                    element_type_id, 
+                                                                    parent_id,
+                                                                    target_field_id,
+                                                                    loader_id,
+                                                                    value
+                                                               FROM 
+                                                                   etl_editor.mappings 
+                                                               WHERE task_id = {_connectionParams.TaskId}
+                                                        """, connection))
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
@@ -62,7 +74,10 @@ namespace Etl.Data
                             Id = Convert.ToInt32(reader["id"]),
                             SourceColumn = reader["source_column"].ToString(),
                             ElementTypeId = reader["element_type_id"].ToString(),
-                            ParentId = reader["parent_id"] != DBNull.Value ? (int?)Convert.ToInt32(reader["parent_id"]) : null
+                            ParentId = reader["parent_id"] != DBNull.Value ? Convert.ToInt32(reader["parent_id"]) : null,
+                            TargetFieldId = reader["target_field_id"] != DBNull.Value ? Convert.ToInt32(reader["target_field_id"]) : null,
+                            LoaderId = reader["loader_id"] != DBNull.Value ? Convert.ToInt32(reader["loader_id"]) : null,
+                            Value = reader["value"] != DBNull.Value ? Convert.ToInt32(reader["value"]) : null
                         });
                     }
                 }
