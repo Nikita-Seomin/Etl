@@ -16,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Application\Exceptions\" />
       <Folder Include="Domain\" />
       <Folder Include="Presentation\" />
     </ItemGroup>
