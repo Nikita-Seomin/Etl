@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
+﻿using Wolverine;
 
 namespace Etl
 {
@@ -15,6 +14,7 @@ namespace Etl
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
-                });
+                })
+                .UseWolverine(); // Add this line to integrate Wolverine
     }
 }

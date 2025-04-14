@@ -12,6 +12,12 @@
       <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.3.0" />
       <PackageReference Include="Npgsql" Version="9.0.3" />
       <PackageReference Include="SSH.NET" Version="2024.2.0" />
+      <PackageReference Include="WolverineFx" Version="3.12.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Domain\" />
+      <Folder Include="Presentation\" />
     </ItemGroup>
 
 </Project>

@@ -1,7 +1,7 @@
-﻿using Etl.Data;
-using Etl.Services;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Etl.Application.Services;
+using Etl.Data;
+using Etl.Infrastructure.Repositories;
+using Wolverine;
 
 namespace Etl
 {
@@ -9,9 +9,8 @@ namespace Etl
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<DbConnectionParams>();
-            services.AddTransient<DataRetrievalService>();
             services.AddControllers();
+            services.AddScoped<IMappingRecordRepository, MappingRecordRepository>();
         }
 
         public void Configure(IApplicationBuilder app)

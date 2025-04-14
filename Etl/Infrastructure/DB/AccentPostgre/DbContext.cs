@@ -27,6 +27,8 @@ namespace Etl.Data
             _sshClient.Connect();
         }
 
+        
+        // Получить строку подключения к БД
         private string GetConnectionString()
         {
             if (_sshClient != null && _sshClient.IsConnected)
@@ -89,6 +91,14 @@ namespace Etl.Data
         {
             _sshClient?.Disconnect();
             _sshClient?.Dispose();
+        }
+
+        // Создает папку для данной БД, если ее нет и создает/(дропает и создает новую) папку для сущностей данной таски
+        public void CreateOrReplaceTaskEntityDir(MappingRecord mappingRecord)
+        {
+            string? dirPath = Environment.GetEnvironmentVariable("FILE_STORAGE\\" + _connectionParams.Database + '\\' +
+                                                                 _connectionParams.TaskId);
+            if (dirPath != null) Directory.CreateDirectory(dirPath);
         }
     }
 }
