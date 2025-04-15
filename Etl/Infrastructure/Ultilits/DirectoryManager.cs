@@ -15,7 +15,7 @@ public class DirectoryManager
     /// </summary>
     /// <param name="newDirectoryName">Имя новой директории</param>
     /// <param name="additionalPath">Доп путь</param>
-    public void CreateDirectory(string newDirectoryName, string additionalPath = "")
+    public string CreateDirectory(string newDirectoryName, string additionalPath = "")
     {
         
         // Раскрываем переменные окружения в пути
@@ -37,6 +37,8 @@ public class DirectoryManager
             Directory.CreateDirectory(fullPath);
             // Console.WriteLine($"Директория создана: {expandedPath}");
         }
+
+        return fullPath;
     }
 
     /// <summary>

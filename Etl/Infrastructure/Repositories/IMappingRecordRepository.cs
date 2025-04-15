@@ -1,6 +1,6 @@
-﻿using Etl.Models;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Etl.Data;
+using Etl.Domain.Entities;
 
 namespace Etl.Infrastructure.Repositories
 {

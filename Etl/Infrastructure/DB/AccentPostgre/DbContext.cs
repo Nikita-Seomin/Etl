@@ -1,6 +1,6 @@
-﻿using Etl.Models;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data;
+using Etl.Domain.Entities;
 using Npgsql;
 using Renci.SshNet; 
 

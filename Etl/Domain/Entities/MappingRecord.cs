@@ -1,6 +1,6 @@
-﻿namespace Etl.Models
+﻿namespace Etl.Domain.Entities
 {
-    public class MappingRecord
+    public class MappingRecord : IMappingRecord
     {
         public int Id { get; set; }
         public string SourceColumn { get; set; }

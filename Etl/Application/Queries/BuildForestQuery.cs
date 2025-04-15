@@ -1,6 +1,5 @@
 ﻿
 using Etl.Data;
-using Etl.Models;
 
 namespace Etl.Application.Queries
 {

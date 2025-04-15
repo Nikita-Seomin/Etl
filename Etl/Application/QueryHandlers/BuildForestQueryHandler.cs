@@ -1,7 +1,8 @@
 ﻿using Etl.Application.Queries;
 using Etl.DataStructures.Forest;
+using Etl.Domain.Entities;
 using Etl.Infrastructure.Repositories;
-using Etl.Models;
+using Etl.Infrastructure.Utilities;
 using Wolverine;
 
 
@@ -43,6 +44,11 @@ namespace Etl.Application.QueryHandlers
                     }
                 }
             }
+            
+            // Сохраняем лес в XML-файлы
+            var fileManager = new FileManager();
+            // передаем лес и имя папки куда сохраним структуру = имя БД
+            fileManager.SaveForestToXmlFiles(forest, query.ConnectionParams.Database );
 
             return forest;
         }

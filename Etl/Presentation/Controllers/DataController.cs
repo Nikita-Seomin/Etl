@@ -1,7 +1,7 @@
 ﻿using Etl.Application.Queries;
 using Etl.Data;
 using Etl.DataStructures.Forest;
-using Etl.Models;
+using Etl.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
 

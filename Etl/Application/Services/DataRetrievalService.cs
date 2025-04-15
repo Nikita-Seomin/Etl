@@ -3,7 +3,7 @@
 using Etl.Data;
 using Etl.DataStructures.Forest;
 using Etl.DataStructures.Tree;
-using Etl.Models;
+using Etl.Domain.Entities;
 
 namespace Etl.Application.Services
 {
