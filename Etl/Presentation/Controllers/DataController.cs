@@ -19,7 +19,7 @@ public class ForestController : ControllerBase
     [HttpPost("structure_build")]
     public async Task<IActionResult> BuildForest([FromBody] DbConnectionParams connectionParams)
     {
-        var query = new BuildForestQuery(connectionParams);
+        var query = new BuildForestCommand(connectionParams);
         var forest = await _bus.InvokeAsync<Forest<int, MappingRecord>>(query);
         return Ok(forest);
     }

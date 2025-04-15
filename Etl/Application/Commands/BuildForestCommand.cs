@@ -3,11 +3,11 @@ using Etl.Data;
 
 namespace Etl.Application.Queries
 {
-    public class BuildForestQuery
+    public class BuildForestCommand
     {
         public DbConnectionParams ConnectionParams { get; }
 
-        public BuildForestQuery(DbConnectionParams connectionParams)
+        public BuildForestCommand(DbConnectionParams connectionParams)
         {
             ConnectionParams = connectionParams;
         }

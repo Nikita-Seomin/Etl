@@ -8,18 +8,18 @@ using Wolverine;
 
 namespace Etl.Application.QueryHandlers
 {
-    public class BuildForestQueryHandler //: IQueryHandler<BuildForestQuery, Forest<int, MappingRecord>>
+    public class BuildForestCommandHandler //: IQueryHandler<BuildForestQuery, Forest<int, MappingRecord>>
     {
         private readonly IMappingRecordRepository _repository;
 
-        public BuildForestQueryHandler(IMappingRecordRepository repository)
+        public BuildForestCommandHandler(IMappingRecordRepository repository)
         {
             _repository = repository;
         }
 
-        public Forest<int, MappingRecord> Handle(BuildForestQuery query)
+        public Forest<int, MappingRecord> Handle(BuildForestCommand command)
         {
-            var records = _repository.GetMappingRecords(query.ConnectionParams);
+            var records = _repository.GetMappingRecords(command.ConnectionParams);
             var forest = new Forest<int, MappingRecord>();
 
             foreach (var record in records)
@@ -48,7 +48,7 @@ namespace Etl.Application.QueryHandlers
             // Сохраняем лес в XML-файлы
             var fileManager = new FileManager();
             // передаем лес и имя папки куда сохраним структуру = имя БД
-            fileManager.SaveForestToXmlFiles(forest, query.ConnectionParams.Database );
+            fileManager.SaveForestToXmlFiles(forest, command.ConnectionParams.Database );
 
             return forest;
         }
