@@ -23,4 +23,12 @@ public class ForestController : ControllerBase
         var forest = await _bus.InvokeAsync<Forest<int, MappingRecord>>(query);
         return Ok(forest);
     }
+    
+    [HttpPost("build_xml_mapping")]
+    public async Task<IActionResult> BuildXmlMapping()
+    {
+        var query = new BuildXmlMappingQuery();
+        // var forest = await _bus.InvokeAsync<Forest<int, MappingRecord>>(query);
+        return Ok();
+    }
 }

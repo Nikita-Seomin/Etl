@@ -46,9 +46,8 @@ namespace Etl.Application.QueryHandlers
             }
             
             // Сохраняем лес в XML-файлы
-            var fileManager = new FileManager();
-            // передаем лес и имя папки куда сохраним структуру = имя БД
-            fileManager.SaveForestToXmlFiles(forest, command.ConnectionParams.Database );
+            // ForestSerializer.SaveToFile(forest, "forest.xml");
+            var res =ForestSerializer.BuildSourcePathToTargetIdMap(forest);
 
             return forest;
         }

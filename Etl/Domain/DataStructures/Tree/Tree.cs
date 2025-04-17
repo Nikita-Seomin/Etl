@@ -2,7 +2,9 @@
 {
     public class Tree<TId, TVal>
     {
-        public TreeNode<TId, TVal> Root { get; private set; }
+        public TreeNode<TId, TVal> Root { get; set; }
+
+        public Tree() {} // Пустой конструктор обязателен
 
         public Tree(TId rootId, TVal rootValue)
         {
@@ -23,7 +25,7 @@
             return FindNodeById(Root, id);
         }
 
-        private TreeNode<TId, TVal> FindNodeById(TreeNode<TId, TVal> node, TId id)
+        public TreeNode<TId, TVal> FindNodeById(TreeNode<TId, TVal> node, TId id)
         {
             if (node == null)
                 return null;
