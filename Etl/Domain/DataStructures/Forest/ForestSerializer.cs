@@ -1,9 +1,5 @@
 ﻿using System.Xml.Serialization;
-using System.Collections.Generic;
-using System.IO;
-using System.Text.Json; // пакет System.Text.Json
 using Etl.Domain.Entities; // для MappingRecord
-using Etl.DataStructures.Forest;
 using Etl.DataStructures.Tree;
 
 namespace Etl.DataStructures.Forest;
@@ -11,14 +7,14 @@ namespace Etl.DataStructures.Forest;
 // Сохранение
 public static class ForestSerializer
 {
-    public static void SaveToFile<TId, TVal>(Forest<TId, TVal> forest, string filePath)
+    public static void SaveForestToFile<TId, TVal>(Forest<TId, TVal> forest, string filePath)
     {
         var serializer = new XmlSerializer(typeof(Forest<TId, TVal>));
         using var fs = new FileStream(filePath, FileMode.Create);
         serializer.Serialize(fs, forest);
     }
 
-    public static Forest<TId, TVal> LoadFromFile<TId, TVal>(string filePath)
+    public static Forest<TId, TVal> LoadForestFromFile<TId, TVal>(string filePath)
     {
         var serializer = new XmlSerializer(typeof(Forest<TId, TVal>));
         using var fs = new FileStream(filePath, FileMode.Open);
@@ -27,20 +23,82 @@ public static class ForestSerializer
     
     public static Dictionary<Stack<string>, int> BuildSourcePathToTargetIdMap(Forest<int, MappingRecord> forest)
     {
-        var result = new Dictionary<Stack<string>, int>(new StackComparer<string>());
-
-        // 1. Соберём быстрый доступ ко всем TreeNode по их Id
-        // (этот набор нужен чтобы быстро найти ссылочный ParentId)
         var nodeById = new Dictionary<int, TreeNode<int, MappingRecord>>();
         foreach (var tree in forest.Trees)
             CollectAllNodes(tree.Root, nodeById);
 
-        // 2. Для кеша уже построенных путей
+        // Соберём быстро: Id корня -> дерево
+        var rootNodeIdToTree = forest.Trees.ToDictionary(t => t.Root.Value.Id);
+
+        // 1. Граф зависимостей
+        var treeDependencies = new Dictionary<Tree<int, MappingRecord>, HashSet<Tree<int, MappingRecord>>>();
+        foreach (var tree in forest.Trees)
+        {
+            var rootParentId = tree.Root.Value.ParentId;
+            if (rootParentId.HasValue && nodeById.TryGetValue(rootParentId.Value, out var parentNode))
+            {
+                Tree<int, MappingRecord>? parentTree = null;
+                foreach (var t in forest.Trees)
+                {
+                    if (IsNodeInTree(t.Root, parentNode))
+                    {
+                        parentTree = t;
+                        break;
+                    }
+                }
+                if (parentTree != null && parentTree != tree)
+                {
+                    if (!treeDependencies.ContainsKey(tree))
+                        treeDependencies[tree] = new HashSet<Tree<int, MappingRecord>>();
+                    treeDependencies[tree].Add(parentTree);
+                }
+            }
+            if (!treeDependencies.ContainsKey(tree))
+                treeDependencies[tree] = new HashSet<Tree<int, MappingRecord>>();
+        }
+        
+        
+        bool IsNodeInTree(TreeNode<int, MappingRecord> root, TreeNode<int, MappingRecord> target)
+        {
+            if (root == target) return true;
+            foreach (var child in root.Children)
+                if (IsNodeInTree(child, target)) return true;
+            return false;
+        }
+
+    // 2. Топологическая сортировка деревьев
+        List<Tree<int, MappingRecord>> sortedTrees = new List<Tree<int, MappingRecord>>();
+        var visited = new HashSet<Tree<int, MappingRecord>>();
+        var inProcess = new HashSet<Tree<int, MappingRecord>>();
+        
+        void Visit(Tree<int, MappingRecord> t)
+        {
+            if (visited.Contains(t))
+                return;
+            if (inProcess.Contains(t))
+                throw new Exception("Циклическая зависимость деревьев!");
+            inProcess.Add(t);
+            foreach (var depTree in treeDependencies[t])
+                Visit(depTree);
+
+            inProcess.Remove(t);
+            visited.Add(t);
+            sortedTrees.Add(t);
+        }
+        foreach (var tree in forest.Trees)
+            Visit(tree);
+        
+        var result = new Dictionary<Stack<string>, int>(new StackComparer<string>());
+        
+        var eachNodePath = new Dictionary<Stack<string>, int>(new StackComparer<string>());
+        
+        // Для кеша уже построенных путей
         var pathToNodeId = new Dictionary<int, Stack<string>>();
 
         // 3. Обход всех деревьев (на корнях смотрим ParentId...)
-        foreach (var tree in forest.Trees)
+        foreach (var tree in sortedTrees)
         {
+            
             // Может понадобиться путь от родительского дерева
             Stack<string>? basePath = null;
             var rootParentId = tree.Root.Value.ParentId;
@@ -50,8 +108,9 @@ public static class ForestSerializer
                 // Если уже есть, возьмем из кеша
                 if (!pathToNodeId.TryGetValue(rootParentId.Value, out basePath))
                 {
+                    var s = nodeById.TryGetValue(rootParentId.Value, out var parentNode1);
                     // Построим путь до родительского узла (если не найден — ошибка структуры)
-                    if (nodeById.TryGetValue(rootParentId.Value, out var parentNode))
+                    if (!nodeById.TryGetValue(rootParentId.Value, out var parentNode))
                         throw new Exception($"Не найден узел с Id = {rootParentId} (ParentId корня дерева)");
 
                     // Путь от корня его дерева до этого узла

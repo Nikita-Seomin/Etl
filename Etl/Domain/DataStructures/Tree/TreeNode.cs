@@ -13,4 +13,18 @@ public class TreeNode<TId, TVal>
         Id = id;
         Value = value;
     }
+    
+    
+    // Добавляет узел-ребёнок к текущему узлу
+    // public void AddChild(TreeNode<TId, TVal> child)
+    // {
+    //     if (child == null)
+    //         throw new ArgumentNullException(nameof(child));
+    //
+    //     // Не допускаем дублирование
+    //     if (!Children.Contains(child))
+    //     {
+    //         Children.Add(child);
+    //     }
+    // }
 }

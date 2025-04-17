@@ -18,7 +18,7 @@ public class BuildXmlMappingQueryHandler
         using var reader = XmlReader.Create(fileStream, new XmlReaderSettings() { IgnoreComments = true, IgnoreWhitespace = true });
         
         // Восстанавливаем лес с XML-файла
-        var forest =ForestSerializer.LoadFromFile<int, MappingRecord>("forest.xml");
+        var forest =ForestSerializer.LoadForestFromFile<int, MappingRecord>("forest.xml");
         
         reader.MoveToContent();
         while (reader.Read())
