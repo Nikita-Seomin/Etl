@@ -9,6 +9,7 @@
         public int? TargetFieldId { get; set; }
         public int? LoaderId { get; set; }
         public int? Value { get; set; }
+        public int? ObjectId { get; set; }
         
     }
 }

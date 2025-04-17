@@ -66,7 +66,7 @@ public static class ForestSerializer
             return false;
         }
 
-    // 2. Топологическая сортировка деревьев
+        // 2. Топологическая сортировка деревьев
         List<Tree<int, MappingRecord>> sortedTrees = new List<Tree<int, MappingRecord>>();
         var visited = new HashSet<Tree<int, MappingRecord>>();
         var inProcess = new HashSet<Tree<int, MappingRecord>>();

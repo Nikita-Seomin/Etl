@@ -56,16 +56,18 @@ namespace Etl.Data
                 connection.Open();
                 using (var command = new NpgsqlCommand($"""
                                                                 SELECT 
-                                                                    id, 
-                                                                    source_column,
-                                                                    element_type_id, 
-                                                                    parent_id,
-                                                                    target_field_id,
-                                                                    loader_id,
-                                                                    value
+                                                                    m.id, 
+                                                                    m.source_column,
+                                                                    m.element_type_id, 
+                                                                    m.parent_id,
+                                                                    m.target_field_id,
+                                                                    m.loader_id,
+                                                                    m.value,
+                                                                    e.object_id
                                                                FROM 
-                                                                   etl_editor.mappings 
-                                                               WHERE task_id = {_connectionParams.TaskId}
+                                                                   etl_editor.mappings m
+                                                               LEFT JOIN object_editor.entities e ON e.id = m.target_field_id
+                                                               WHERE m.task_id = {_connectionParams.TaskId}
                                                         """, connection))
                 using (var reader = command.ExecuteReader())
                 {
@@ -79,7 +81,8 @@ namespace Etl.Data
                             ParentId = reader["parent_id"] != DBNull.Value ? Convert.ToInt32(reader["parent_id"]) : null,
                             TargetFieldId = reader["target_field_id"] != DBNull.Value ? Convert.ToInt32(reader["target_field_id"]) : null,
                             LoaderId = reader["loader_id"] != DBNull.Value ? Convert.ToInt32(reader["loader_id"]) : null,
-                            Value = reader["value"] != DBNull.Value ? Convert.ToInt32(reader["value"]) : null
+                            Value = reader["value"] != DBNull.Value ? Convert.ToInt32(reader["value"]) : null,
+                            ObjectId = reader["object_id"] != DBNull.Value ? Convert.ToInt32(reader["value"]) : null
                         });
                     }
                 }
