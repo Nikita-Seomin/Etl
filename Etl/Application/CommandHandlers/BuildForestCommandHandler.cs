@@ -87,6 +87,5 @@ namespace Etl.Application.QueryHandlers
 
             return forest;
         }
-
     }
 }

@@ -28,7 +28,7 @@ public class ForestController : ControllerBase
     public async Task<IActionResult> BuildXmlMapping()
     {
         var query = new BuildXmlMappingQuery();
-        // var forest = await _bus.InvokeAsync<Forest<int, MappingRecord>>(query);
+        await _bus.InvokeAsync(query); // вызывается соответствующий handler через Wolverine!
         return Ok();
     }
 }
