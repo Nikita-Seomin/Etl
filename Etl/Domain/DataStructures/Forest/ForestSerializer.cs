@@ -21,7 +21,7 @@ public static class ForestSerializer
         return (Forest<TId, TVal>)serializer.Deserialize(fs);
     }
     
-    public static Dictionary<Stack<string>, int> BuildSourcePathToTargetIdMap(Forest<int, MappingRecord> forest)
+    public static Dictionary<Stack<string>, (int, int)> BuildSourcePathToTargetIdMap(Forest<int, MappingRecord> forest)
     {
         var nodeById = new Dictionary<int, TreeNode<int, MappingRecord>>();
         foreach (var tree in forest.Trees)
@@ -88,9 +88,9 @@ public static class ForestSerializer
         foreach (var tree in forest.Trees)
             Visit(tree);
         
-        var result = new Dictionary<Stack<string>, int>(new StackComparer<string>());
+        var result = new Dictionary<Stack<string>, (int, int)>(new StackComparer<string>());
         
-        var eachNodePath = new Dictionary<Stack<string>, int>(new StackComparer<string>());
+        var eachNodePath = new Dictionary<Stack<string>, (int, int)>(new StackComparer<string>());
         
         // Для кеша уже построенных путей
         var pathToNodeId = new Dictionary<int, Stack<string>>();
@@ -172,7 +172,7 @@ public static class ForestSerializer
     private static void TraverseWithBasePath(
         TreeNode<int, MappingRecord> node,
         Stack<string> path,
-        Dictionary<Stack<string>, int> dict,
+        Dictionary<Stack<string>, (int, int)> dict,
         Dictionary<int, Stack<string>> pathToNodeId)
     {
         if (node == null) return;
@@ -184,7 +184,7 @@ public static class ForestSerializer
 
         if (node.Value.TargetFieldId.HasValue)
         {
-            dict.Add(stackCopy, node.Value.TargetFieldId.Value);
+            dict.Add(stackCopy, (node.Value.ObjectId.Value, node.Value.TargetFieldId.Value));
         }
 
         // Рекурсивно потомки

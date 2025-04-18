@@ -82,7 +82,7 @@ namespace Etl.Data
                             TargetFieldId = reader["target_field_id"] != DBNull.Value ? Convert.ToInt32(reader["target_field_id"]) : null,
                             LoaderId = reader["loader_id"] != DBNull.Value ? Convert.ToInt32(reader["loader_id"]) : null,
                             Value = reader["value"] != DBNull.Value ? Convert.ToInt32(reader["value"]) : null,
-                            ObjectId = reader["object_id"] != DBNull.Value ? Convert.ToInt32(reader["value"]) : null
+                            ObjectId = reader["object_id"] != DBNull.Value ? Convert.ToInt32(reader["object_id"]) : null
                         });
                     }
                 }
