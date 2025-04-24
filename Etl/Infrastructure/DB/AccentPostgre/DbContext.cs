@@ -63,10 +63,26 @@ namespace Etl.Data
                                                                     m.target_field_id,
                                                                     m.loader_id,
                                                                     m.value,
-                                                                    e.object_id
+                                                                    CASE 
+                                                               	        WHEN e.object_id IS NOT NULL
+                                                               	        THEN e.object_id
+                                                               	        ELSE l.object_id_from_properties
+                                                                    END AS object_id
                                                                FROM 
                                                                    etl_editor.mappings m
                                                                LEFT JOIN object_editor.entities e ON e.id = m.target_field_id
+                                                               LEFT JOIN (
+                                                                    SELECT
+                                                                        id,
+                                                                        -- Извлекаем значение object_id из массива JSON
+                                                                        (
+                                                                            SELECT (elem->>'value')::integer
+                                                                            FROM jsonb_array_elements(properties) AS elem
+                                                                            WHERE elem->>'id' = 'object_id'
+                                                                            LIMIT 1
+                                                                        ) AS object_id_from_properties
+                                                                    FROM etl_editor.loaders
+                                                                ) l ON l.id = m.loader_id
                                                                WHERE m.task_id = {_connectionParams.TaskId}
                                                         """, connection))
                 using (var reader = command.ExecuteReader())

@@ -149,7 +149,7 @@ public static class ForestSerializer
         var path = new Stack<string>();
         var current = node;
 
-        // Идём к родителю через .Parent, если есть (если нет Parent property — сложнее!)
+        // Идём к родителю через. Parent, если есть (если нет Parent property — сложнее!)
         while (current != null)
         {
             path.Push(current.Value.SourceColumn);
@@ -183,9 +183,34 @@ public static class ForestSerializer
         var stackCopy = new Stack<string>(path.Reverse());
         pathToNodeId[node.Value.Id] = stackCopy;
 
-        if (node.Value.TargetFieldId.HasValue)
+        if (node.Value.TargetFieldId.HasValue && node.Value.ObjectId.HasValue)
         {
             dict.Add(stackCopy, (node.Value.ObjectId.Value, node.Value.TargetFieldId.Value));
+        }
+        else if (node.Value.ElementTypeId == "array")
+        {
+            if (node.Value.SourceColumn != null && node.Value.SourceColumn.EndsWith("s"))
+            {
+                // НЕ добавляем этот элемент, а вместо этого добавляем детей
+                foreach (var child in node.Children)
+                {
+                    // добавить детей
+                    if (child.Value.ElementTypeId != "element")
+                        continue;
+                    var stackCopyChild = new Stack<string>(path.Reverse());
+                    stackCopyChild.Push(child.Value.SourceColumn);
+                    dict.Add(stackCopyChild, (node.Value.ObjectId ?? 0, child.Value.TargetFieldId ?? 0));
+                }
+            }
+            else
+            {
+                // Добавляем только этот массив, если не на 's' 
+                dict.Add(stackCopy, (node.Value.ObjectId ?? 0, node.Value.TargetFieldId ?? 0));
+            }
+        }
+        else if (stackCopy.Count == 1)
+        {
+            dict.Add(stackCopy, (node.Value.ObjectId ?? 2, node.Value.TargetFieldId ?? 3));
         }
 
         // Рекурсивно потомки
