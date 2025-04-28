@@ -210,7 +210,7 @@ public static class ForestSerializer
         }
         else if (stackCopy.Count == 1)
         {
-            dict.Add(stackCopy, (node.Value.ObjectId ?? 2, node.Value.TargetFieldId ?? 3));
+            dict.Add(stackCopy, (node.Value.ObjectId ?? 2, node.Value.TargetFieldId ?? 0));
         }
 
         // Рекурсивно потомки

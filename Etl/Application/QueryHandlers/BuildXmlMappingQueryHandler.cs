@@ -3,6 +3,11 @@ using System.Xml;
 using Etl.Application.Queries;
 using Etl.Infrastructure.Ultilits;
 using Etl.Infrastructure.Utilities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Etl.DataStructures.Tree;
+using Etl.Domain.DataStructures.Stack;
 
 public class BuildXmlMappingQueryHandler
 {
@@ -10,18 +15,16 @@ public class BuildXmlMappingQueryHandler
     
     public int BufLength { get; set; }
 
-    public void Handle(BuildXmlMappingQuery query)
+    public Tree<Guid, dynamic> Handle(BuildXmlMappingQuery query)
     {
         using var fileStream = new FileStream(_xmlFileName, FileMode.Open, FileAccess.Read, FileShare.Read, BufLength,
             FileOptions.SequentialScan);
         using var reader = XmlReader.Create(fileStream,
             new XmlReaderSettings() { IgnoreComments = true, IgnoreWhitespace = true });
 
-        // Загрузка словаря маппинга
         Dictionary<Stack<string>, (int ObjectId, int TargetFieldId)> dicTag2DbData =
             FileManager.LoadDictionary("D:\\Работа\\dev\\Etl\\Etl\\FILE_STORAGE\\rgis\\dictionary.json");
 
-        // Построение динамических классов
         var classAttrs = dicTag2DbData.Values
             .Distinct()
             .GroupBy(x => x.ObjectId)
@@ -29,196 +32,130 @@ public class BuildXmlMappingQueryHandler
 
         var typeMap = DynamicClassBuilder.BuildClasses(classAttrs);
 
-        // Структуры для построения дерева
-        Stack<string> currentPath = new Stack<string>();
-        Stack<dynamic> objectStack = new Stack<dynamic>();
-        Stack<int> objectIdStack = new Stack<int>();
-        Stack<string> objectCreationTags = new Stack<string>(); // Для отслеживания тегов, по которым создавались объекты
-        dynamic rootObject = null;
-        dynamic currentObject = null;
-        int? currentObjectId = null;
-        string currentElementName = null;
+        var pathStack = new Stack<string>();
+        var nodeStack = new Stack<(TreeNode<Guid, dynamic> node, int objectId)>();
+        Tree<Guid, dynamic> tree = new(); // Итоговое дерево
 
         reader.MoveToContent();
-        while (reader.Read())
+
+        while (!reader.EOF)
         {
-            switch (reader.NodeType)
+            if (reader.NodeType == XmlNodeType.Element)
             {
-                case XmlNodeType.Element:
-                    currentElementName = reader.Name;
-                    currentPath.Push(currentElementName);
+                pathStack.Push(reader.Name);
 
-                    // Проверяем соответствие текущего пути с ключами словаря
-                    // var matchingEntry = dicTag2DbData.TryGetValue(currentPath, out var matchingEntry);
-                    
-                    if (dicTag2DbData.TryGetValue(currentPath, out var matchingEntry))
+                // Копия пути для поиска в словаре
+                var currentPath = new Stack<string>(pathStack);
+
+                if (dicTag2DbData.TryGetValue(currentPath, out var matchingEntry))
+                {
+                    var (objectId, targetFieldId) = matchingEntry;
+
+                    // Проверка условий создания нового объекта
+                    if (targetFieldId == 0 && objectId > 0)
                     {
-                        var (objectId, targetFieldId) = matchingEntry;
+                        // Создаем новый экземпляр класса
+                        var type = typeMap[objectId];
+                        dynamic obj = Activator.CreateInstance(type);
 
-                        // Условие для создания нового объекта
-                        if (targetFieldId == 0 && objectId > 0 && 
-                            (currentObjectId == null || objectId != currentObjectId))
-                        {
-                            CreateNewObject(typeMap, objectId, ref currentObject, ref currentObjectId, 
-                                objectStack, objectIdStack, objectCreationTags, currentElementName, ref rootObject);
-                        }
-                    }
-                    break;
+                        // Генерим уникальный Guid
+                        Guid objId = Guid.NewGuid();
+                        var newNode = new TreeNode<Guid, dynamic>(objId, obj);
 
-                case XmlNodeType.EndElement:
-                    if (currentPath.Count > 0)
-                    {
-                        string closingTag = currentPath.Pop();
-                        
-                        // Проверяем, закрывается ли тег, по которому был создан текущий объект
-                        if (objectCreationTags.Count > 0 && closingTag == objectCreationTags.Peek())
+                        if (nodeStack.Count == 0)
                         {
-                            objectCreationTags.Pop();
-                            
-                            // Возвращаемся к родительскому объекту
-                            if (objectStack.Count > 0)
-                            {
-                                objectStack.Pop();
-                                objectIdStack.Pop();
-                                
-                                if (objectStack.Count > 0)
-                                {
-                                    currentObject = objectStack.Peek();
-                                    currentObjectId = objectIdStack.Peek();
-                                }
-                                else
-                                {
-                                    currentObject = null;
-                                    currentObjectId = null;
-                                }
-                            }
+                            tree.Root = newNode; // root
                         }
-                    }
-                    break;
+                        else
+                        {
+                            nodeStack.Peek().node.Children.Add(newNode); // как child
+                        }
 
-                case XmlNodeType.Text:
-                    if (currentObject != null && !string.IsNullOrEmpty(currentElementName))
-                    {
-                        // Ищем поле для заполнения
-                        ;
-                        
-                        if (dicTag2DbData.TryGetValue(currentPath, out var fieldEntry) && fieldEntry.TargetFieldId > 0)
-                        {
-                            string fieldName = $"attr_{fieldEntry.TargetFieldId}_";
-                            SetDynamicField(currentObject, fieldName, reader.Value);
-                        }
+                        nodeStack.Push((newNode, objectId));
                     }
-                    break;
+                }
+
+                reader.Read();
             }
-        }
-        Console.Write("dawd");
-        // Возвращаем результат - корневой объект дерева
-        // Можно добавить логику для работы с rootObject
-    }
-
-    private void CreateNewObject(
-        Dictionary<int, Type> typeMap, 
-        int objectId,
-        ref dynamic currentObject,
-        ref int? currentObjectId,
-        Stack<dynamic> objectStack,
-        Stack<int> objectIdStack,
-        Stack<string> objectCreationTags,
-        string creationTag,
-        ref dynamic rootObject)
-    {
-        if (typeMap.TryGetValue(objectId, out Type objectType))
-        {
-            var newObject = Activator.CreateInstance(objectType);
-            
-            // Добавляем новый объект как child к текущему
-            if (currentObject != null)
+            else if (reader.NodeType == XmlNodeType.EndElement)
             {
-                AddChildToParent(currentObject, newObject);
+                if (pathStack.Count > 0)
+                {
+                    // Копия пути для поиска в словаре
+                    var currentPath = new Stack<string>(pathStack);
+                    
+                    // При возврате назад выходим из текущего объекта, если objectId совпадает
+                    int objId = GetObjectId(dicTag2DbData, currentPath);
+                    int fieldId = GetTargetFieldId(dicTag2DbData, currentPath);
+
+                    if (nodeStack.Count > 0 && nodeStack.Peek().objectId == objId && fieldId == 0)
+                    {
+                        nodeStack.Pop();
+                    }
+                    pathStack.Pop();
+                }
+
+                reader.Read();
+            }
+            else if (reader.NodeType == XmlNodeType.Text || reader.NodeType == XmlNodeType.CDATA)
+            {
+                // Положить значение в текущий объект (если есть текущий nodeStack)
+                if (nodeStack.Count > 0)
+                {
+                    var curNode = nodeStack.Peek();
+                    var curObj = curNode.node.Value;
+                    var curObjectId = curNode.objectId;
+                    
+                    // Копия пути для поиска в словаре
+                    var currentPath = new Stack<string>(pathStack);
+ 
+                    var fieldId = GetTargetFieldId(dicTag2DbData, currentPath);
+                    var prop = curObj.GetType().GetField($"attr_{fieldId}_");
+
+                    if (prop != null)
+                        prop.SetValue(curObj, reader.Value);
+                }
+
+                reader.Read();
             }
             else
             {
-                rootObject = newObject;
+                reader.Read();
             }
+        }
 
-            // Обновляем текущие ссылки
-            currentObject = newObject;
-            currentObjectId = objectId;
-            objectStack.Push(currentObject);
-            objectIdStack.Push(objectId);
-            objectCreationTags.Push(creationTag);
-        }
-    }
+        return tree;
 
-    private void AddChildToParent(dynamic parent, dynamic child)
-    {
-        try
+        bool IsSuitablePath(Stack<string> dicPath, Stack<string> xmlPath)
         {
-            var parentType = (Type)parent.GetType();
-            
-            // Ищем подходящее свойство-коллекцию
-            foreach (var prop in parentType.GetProperties())
-            {
-                if (prop.PropertyType.IsGenericType && 
-                    prop.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
-                {
-                    var itemType = prop.PropertyType.GetGenericArguments()[0];
-                    if (itemType == child.GetType())
-                    {
-                        var collection = prop.GetValue(parent) ?? 
-                                       Activator.CreateInstance(prop.PropertyType);
-                        collection.Add(child);
-                        prop.SetValue(parent, collection);
-                        return;
-                    }
-                }
-            }
-            
-            // Ищем обычное свойство подходящего типа
-            foreach (var prop in parentType.GetProperties())
-            {
-                if (prop.PropertyType == child.GetType())
-                {
-                    prop.SetValue(parent, child);
-                    return;
-                }
-            }
-            
-            // Если не нашли подходящее свойство, создаем новое List<ChildType>
-            var listType = typeof(List<>).MakeGenericType(child.GetType());
-            var newList = Activator.CreateInstance(listType);
-            newList.Add(child);
-            
-            // Ищем подходящее имя для новой коллекции
-            string childName = child.GetType().Name.ToLower() + "s";
-            var newProp = parentType.GetProperty(childName) ?? 
-                         parentType.GetProperties().FirstOrDefault(p => p.PropertyType == listType);
-            
-            if (newProp != null)
-            {
-                newProp.SetValue(parent, newList);
-            }
+            // сравнение путей (или попроще — равно ли содержимое)
+            return dicPath.SequenceEqual(xmlPath);
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ошибка при добавлении child к parent: {ex.Message}");
-        }
-    }
 
-    private void SetDynamicField(dynamic obj, string fieldName, string value)
-    {
-        try
+        bool EndsWithS(string name) =>
+            name.EndsWith("s", StringComparison.OrdinalIgnoreCase);
+
+        bool PreviousLevelEndsWithS(Stack<string> pathStack)
         {
-            var field = ((Type)obj.GetType()).GetField(fieldName, 
-                BindingFlags.Public | BindingFlags.Instance);
-            if (field != null)
-            {
-                field.SetValue(obj, value);
-            }
+            if (pathStack.Count < 2) return false;
+            var arr = pathStack.ToArray();
+            return arr[1].EndsWith("s", StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception ex)
+
+        int GetObjectId(Dictionary<Stack<string>, (int ObjectId, int TargetFieldId)> dic, IEnumerable<string> path)
         {
-            Console.WriteLine($"Ошибка при установке поля {fieldName}: {ex.Message}");
+            var keyStack = new Stack<string>(path.Reverse());
+            if (dic.TryGetValue(keyStack, out var val))
+                return val.ObjectId;
+            return 0;
+        }
+
+        int GetTargetFieldId(Dictionary<Stack<string>, (int ObjectId, int TargetFieldId)> dic, IEnumerable<string> path)
+        {
+            var keyStack = new Stack<string>(path.Reverse());
+            if (dic.TryGetValue(keyStack, out var val))
+                return val.TargetFieldId;
+            return 0;
         }
     }
 }
