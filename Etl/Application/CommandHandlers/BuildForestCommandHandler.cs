@@ -82,8 +82,8 @@ namespace Etl.Application.QueryHandlers
             }
 
             // ForestSerializer.SaveToFile(forest, "forest.xml");
-            var res = ForestSerializer.BuildSourcePathToTargetIdMap(forest);
-            FileManager.SaveDictionary(res, "D:\\Работа\\dev\\Etl\\Etl\\FILE_STORAGE\\rgis\\dictionary.json");
+            var res = ForestSerializerStringKey.BuildSourcePathToTargetIdMap(forest);
+            FileManager.SaveDictionaryStringKey(res, "D:\\Работа\\dev\\Etl\\Etl\\FILE_STORAGE\\rgis\\dictionary.json");
 
             return forest;
         }

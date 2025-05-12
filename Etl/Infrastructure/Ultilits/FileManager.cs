@@ -102,6 +102,47 @@ namespace Etl.Infrastructure.Utilities
            }
            return dict;
        }
+       
+       public static void SaveDictionaryStringKey(Dictionary<string, (int, int)>? res, string filePath)
+       {
+           if (res == null)
+               return;
+
+           var data = res.Select(kvp => new DictEntryStringKey {
+               Path = kvp.Key, // Просто сохраняем строковый путь
+               Item1 = kvp.Value.Item1,
+               Item2 = kvp.Value.Item2
+           }).ToList();
+
+           var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+           File.WriteAllText(filePath, json);
+       }
+
+       public static Dictionary<string, (int, int)> LoadDictionaryStringKey(string filePath)
+       {
+           var json = File.ReadAllText(filePath);
+           var data = JsonSerializer.Deserialize<List<DictEntryStringKey>>(json)!;
+           var dict = new Dictionary<string, (int, int)>();
+
+           foreach (var entry in data)
+           {
+               // Просто добавляем запись с строковым ключом
+               dict[entry.Path!] = (entry.Item1, entry.Item2);
+           }
+           return dict;
+       }
+       
+       
+       
+       
+   }
+   
+   
+   public class DictEntryStringKey
+   {
+       public string? Path { get; set; }  // Изменили название с StackValues на Path
+       public int Item1 { get; set; }
+       public int Item2 { get; set; }
    }
    
    

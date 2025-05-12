@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Etl.DataStructures.Tree;
-using Etl.Domain.DataStructures.Stack;
 
 public class BuildXmlMappingQueryHandler
 {
@@ -22,8 +21,8 @@ public class BuildXmlMappingQueryHandler
         using var reader = XmlReader.Create(fileStream,
             new XmlReaderSettings() { IgnoreComments = true, IgnoreWhitespace = true });
 
-        Dictionary<Stack<string>, (int ObjectId, int TargetFieldId)> dicTag2DbData =
-            FileManager.LoadDictionary("D:\\Работа\\dev\\Etl\\Etl\\FILE_STORAGE\\rgis\\dictionary.json");
+        Dictionary<string, (int ObjectId, int TargetFieldId)> dicTag2DbData =
+            FileManager.LoadDictionaryStringKey("D:\\Работа\\dev\\Etl\\Etl\\FILE_STORAGE\\rgis\\dictionary.json");
 
         var classAttrs = dicTag2DbData.Values
             .Distinct()
@@ -32,7 +31,7 @@ public class BuildXmlMappingQueryHandler
 
         var typeMap = DynamicClassBuilder.BuildClasses(classAttrs);
 
-        var pathStack = new Stack<string>();
+        var pathParts = new List<string>();
         var nodeStack = new Stack<(TreeNode<Guid, dynamic> node, int objectId)>();
         Tree<Guid, dynamic> tree = new(); // Итоговое дерево
 
@@ -42,10 +41,8 @@ public class BuildXmlMappingQueryHandler
         {
             if (reader.NodeType == XmlNodeType.Element)
             {
-                pathStack.Push(reader.Name);
-
-                // Копия пути для поиска в словаре
-                var currentPath = new Stack<string>(pathStack);
+                pathParts.Add(reader.Name);
+                var currentPath = string.Join("\\", pathParts);
 
                 if (dicTag2DbData.TryGetValue(currentPath, out var matchingEntry))
                 {
@@ -79,10 +76,9 @@ public class BuildXmlMappingQueryHandler
             }
             else if (reader.NodeType == XmlNodeType.EndElement)
             {
-                if (pathStack.Count > 0)
+                if (pathParts.Count > 0)
                 {
-                    // Копия пути для поиска в словаре
-                    var currentPath = new Stack<string>(pathStack);
+                    var currentPath = string.Join("\\", pathParts);
                     
                     // При возврате назад выходим из текущего объекта, если objectId совпадает
                     int objId = GetObjectId(dicTag2DbData, currentPath);
@@ -92,7 +88,7 @@ public class BuildXmlMappingQueryHandler
                     {
                         nodeStack.Pop();
                     }
-                    pathStack.Pop();
+                    pathParts.RemoveAt(pathParts.Count - 1);
                 }
 
                 reader.Read();
@@ -106,8 +102,7 @@ public class BuildXmlMappingQueryHandler
                     var curObj = curNode.node.Value;
                     var curObjectId = curNode.objectId;
                     
-                    // Копия пути для поиска в словаре
-                    var currentPath = new Stack<string>(pathStack);
+                    var currentPath = string.Join("\\", pathParts);
  
                     var fieldId = GetTargetFieldId(dicTag2DbData, currentPath);
                     var prop = curObj.GetType().GetField($"attr_{fieldId}_");
@@ -126,34 +121,19 @@ public class BuildXmlMappingQueryHandler
 
         return tree;
 
-        bool IsSuitablePath(Stack<string> dicPath, Stack<string> xmlPath)
-        {
-            // сравнение путей (или попроще — равно ли содержимое)
-            return dicPath.SequenceEqual(xmlPath);
-        }
-
         bool EndsWithS(string name) =>
             name.EndsWith("s", StringComparison.OrdinalIgnoreCase);
 
-        bool PreviousLevelEndsWithS(Stack<string> pathStack)
+        int GetObjectId(Dictionary<string, (int ObjectId, int TargetFieldId)> dic, string path)
         {
-            if (pathStack.Count < 2) return false;
-            var arr = pathStack.ToArray();
-            return arr[1].EndsWith("s", StringComparison.OrdinalIgnoreCase);
-        }
-
-        int GetObjectId(Dictionary<Stack<string>, (int ObjectId, int TargetFieldId)> dic, IEnumerable<string> path)
-        {
-            var keyStack = new Stack<string>(path.Reverse());
-            if (dic.TryGetValue(keyStack, out var val))
+            if (dic.TryGetValue(path, out var val))
                 return val.ObjectId;
             return 0;
         }
 
-        int GetTargetFieldId(Dictionary<Stack<string>, (int ObjectId, int TargetFieldId)> dic, IEnumerable<string> path)
+        int GetTargetFieldId(Dictionary<string, (int ObjectId, int TargetFieldId)> dic, string path)
         {
-            var keyStack = new Stack<string>(path.Reverse());
-            if (dic.TryGetValue(keyStack, out var val))
+            if (dic.TryGetValue(path, out var val))
                 return val.TargetFieldId;
             return 0;
         }
