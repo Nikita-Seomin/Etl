@@ -183,34 +183,54 @@ public static class ForestSerializer
         var stackCopy = new Stack<string>(path.Reverse());
         pathToNodeId[node.Value.Id] = stackCopy;
 
-        if (node.Value.TargetFieldId.HasValue && node.Value.ObjectId.HasValue)
+        if (node.Value.ElementTypeId != "array")
         {
             dict.Add(stackCopy, (node.Value.ObjectId.Value, node.Value.TargetFieldId.Value));
         }
+        // для массива логика такова: т.к. в xml <cadastral_bloks><cadastral_blok>...</cadastral_blok></cadastral_bloks> массивом может быть
+        // и </cadastral_bloks> , и <cadastral_blok>, то возьмем в словарь текущую ноду - если у нее > 1 ребенок element, или ребенка element при = 1
         else if (node.Value.ElementTypeId == "array")
         {
-            if (node.Value.SourceColumn != null && node.Value.SourceColumn.EndsWith("s"))
+            var countClindren = 0;
+            // Считаем колличество детей с типой element
+            foreach (var child in node.Children)
             {
-                // НЕ добавляем этот элемент, а вместо этого добавляем детей
+                if (child.Value.ElementTypeId == "array")
+                {
+                    countClindren = 2;
+                    break;
+                }
+                if (child.Value.ElementTypeId == "element")
+                { 
+                    countClindren = countClindren + 1;
+                    if (countClindren > 1)
+                    {
+                        break;
+                    }
+                }
+            }
+            
+            //копируем путь
+            var stackCopyChild = new Stack<string>(path.Reverse());
+            // если детей с типом element много - добавляем в словарь текущую ноду
+            if (countClindren > 1)
+            {
+                stackCopyChild.Push(node.Value.SourceColumn);
+                dict.Add(stackCopyChild, (node.Value.ObjectId ?? 0, node.Value.TargetFieldId ?? 0));
+            }
+            else // если ребенок с типом element один - добавляем его в словарь
+            {
                 foreach (var child in node.Children)
                 {
                     // добавить детей
-                    if (child.Value.ElementTypeId != "element")
-                        continue;
-                    var stackCopyChild = new Stack<string>(path.Reverse());
-                    stackCopyChild.Push(child.Value.SourceColumn);
-                    dict.Add(stackCopyChild, (node.Value.ObjectId ?? 0, child.Value.TargetFieldId ?? 0));
+                    if (child.Value.ElementTypeId == "element")
+                    {
+                        stackCopyChild.Push(child.Value.SourceColumn);
+                        dict.Add(stackCopyChild, (node.Value.ObjectId ?? 0, child.Value.TargetFieldId ?? 0));
+                        break;
+                    }
                 }
             }
-            else
-            {
-                // Добавляем только этот массив, если не на 's' 
-                dict.Add(stackCopy, (node.Value.ObjectId ?? 0, node.Value.TargetFieldId ?? 0));
-            }
-        }
-        else if (stackCopy.Count == 1)
-        {
-            dict.Add(stackCopy, (node.Value.ObjectId ?? 2, node.Value.TargetFieldId ?? 0));
         }
 
         // Рекурсивно потомки

@@ -22,7 +22,7 @@ public static class ForestSerializerStringKey
         return (Forest<TId, TVal>)serializer.Deserialize(fs);
     }
     
-    public static Dictionary<string, (int, int)> BuildSourcePathToTargetIdMap(Forest<int, MappingRecord> forest)
+    public static Dictionary<string, (int, int, bool)> BuildSourcePathToTargetIdMap(Forest<int, MappingRecord> forest)
     {
         var nodeById = new Dictionary<int, TreeNode<int, MappingRecord>>();
         foreach (var tree in forest.Trees)
@@ -89,7 +89,7 @@ public static class ForestSerializerStringKey
         foreach (var tree in forest.Trees)
             Visit(tree);
         
-        var result = new Dictionary<string, (int, int)>();
+        var result = new Dictionary<string, (int, int, bool)>();
         
         var eachNodePath = new Dictionary<string, (int, int)>();
         
@@ -124,7 +124,7 @@ public static class ForestSerializerStringKey
             }
 
             // 4. Обходим дерево, но начальный path — не пустой, а тот что нашли
-            TraverseWithBasePath(tree.Root, basePath, result, pathToNodeId);
+            TraverseWithBasePath(tree.Root, basePath, result, pathToNodeId, rootNodeIdToTree);
         }
 
         return result;
@@ -169,8 +169,9 @@ public static class ForestSerializerStringKey
     private static void TraverseWithBasePath(
         TreeNode<int, MappingRecord> node,
         string basePath,
-        Dictionary<string, (int, int)> dict,
-        Dictionary<int, string> pathToNodeId)
+        Dictionary<string, (int, int, bool)> dict,
+        Dictionary<int, string> pathToNodeId,
+        Dictionary<int, Tree<int, MappingRecord>> rootNodeIdToTree)
     {
         if (node == null) return;
         
@@ -180,38 +181,73 @@ public static class ForestSerializerStringKey
 
         // Запоминаем путь до node.Value.Id
         pathToNodeId[node.Value.Id] = currentPath;
+        
+        bool isArrayElement = node.Value.ElementTypeId == "array" ? true : false;
 
-        if (node.Value.TargetFieldId.HasValue && node.Value.ObjectId.HasValue)
+        if (node.Value.ElementTypeId == "element" && node.Value.ObjectId.HasValue &&  node.Value.TargetFieldId.HasValue)
         {
-            dict.Add(currentPath, (node.Value.ObjectId.Value, node.Value.TargetFieldId.Value));
+            dict.Add(currentPath, (node.Value.ObjectId.Value, node.Value.TargetFieldId.Value, isArrayElement));
         }
+        // для массива логика такова: т.к. в xml <cadastral_bloks><cadastral_blok>...</cadastral_blok></cadastral_bloks> массивом может быть
+        // и </cadastral_bloks> , и <cadastral_blok>, то возьмем в словарь текущую ноду - если у нее > 1 ребенок element, или ребенка element при = 1
         else if (node.Value.ElementTypeId == "array")
         {
-            if (node.Value.SourceColumn != null && node.Value.SourceColumn.EndsWith("s"))
+            var nodeTargetFieldId = node.Value.TargetFieldId.HasValue ? node.Value.TargetFieldId.Value : 0;
+            var nodeObjectId = node.Value.ObjectId.HasValue ? node.Value.ObjectId.Value : 0;
+            // Считаем количество детей с типом "element"
+            int elementChildrenCount = 0;
+            // Проверяем что ни один массив не ссылается на данную ноду , т.е. чуть ниже по вложенности не начинается сразу же новый подреестр
+            foreach (var root in rootNodeIdToTree.Values)
             {
-                // НЕ добавляем этот элемент, а вместо этого добавляем детей
+                if (root.Root.Value.ParentId.HasValue && 
+                    root.Root.Value.ParentId.Value == node.Value.Id)
+                {
+                    elementChildrenCount = 2;
+                    break;
+                }
+            }
+            // Если на уровне ниже точно нет подреестра, то проверяем количество ссылающихся element
+            if (elementChildrenCount == 0)
+            {
                 foreach (var child in node.Children)
                 {
-                    // добавить детей
-                    if (child.Value.ElementTypeId != "element")
-                        continue;
-                    var childPath = $"{currentPath}\\{child.Value.SourceColumn}";
-                    dict.Add(childPath, (node.Value.ObjectId ?? 0, child.Value.TargetFieldId ?? 0));
+                    if (child.Value.ElementTypeId == "element")
+                    {
+                        elementChildrenCount++;
+                        if (elementChildrenCount > 1)
+                        {
+                            break; // Нет смысла считать дальше, если уже больше одного
+                        }
+                    }
                 }
+            }
+            // массив содержит массив или массив содержит много элементов или пустой массив - в словарь тек ноду
+            if (elementChildrenCount > 1 || elementChildrenCount == 0)
+            {
+                // Если детей с типом "element" много - добавляем текущую ноду
+                dict.Add(currentPath, (node.Value.ObjectId ?? nodeObjectId, node.Value.TargetFieldId ?? nodeTargetFieldId, isArrayElement));
             }
             else
             {
-                // Добавляем только этот массив, если не на 's' 
-                dict.Add(currentPath, (node.Value.ObjectId ?? 0, node.Value.TargetFieldId ?? 0));
+                // Если ребенок с типом "element" один - добавляем его
+                foreach (var child in node.Children)
+                {
+                    if (child.Value.ElementTypeId == "element")
+                    {
+                        var childPath = $"{currentPath}\\{child.Value.SourceColumn}";
+                        dict.Add(childPath, (node.Value.ObjectId ?? nodeObjectId, child.Value.TargetFieldId ?? nodeTargetFieldId, isArrayElement));
+                        break; // Добавляем только первого подходящего ребенка
+                    }
+                }
             }
         }
         else if (string.IsNullOrEmpty(basePath))
         {
-            dict.Add(currentPath, (node.Value.ObjectId ?? 2, node.Value.TargetFieldId ?? 0));
+            dict.Add(currentPath, (node.Value.ObjectId ?? 2, node.Value.TargetFieldId ?? 0, isArrayElement));
         }
 
         // Рекурсивно потомки
         foreach (var child in node.Children)
-            TraverseWithBasePath(child, currentPath, dict, pathToNodeId);
+            TraverseWithBasePath(child, currentPath, dict, pathToNodeId, rootNodeIdToTree);
     }
 }

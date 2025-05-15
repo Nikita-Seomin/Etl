@@ -56,34 +56,56 @@ namespace Etl.Data
                 connection.Open();
                 using (var command = new NpgsqlCommand($"""
                                                                 SELECT 
-                                                                    m.id, 
-                                                                    m.source_column,
-                                                                    m.element_type_id, 
-                                                                    m.parent_id,
-                                                                    m.target_field_id,
-                                                                    m.loader_id,
-                                                                    m.value,
-                                                                    CASE 
-                                                               	        WHEN e.object_id IS NOT NULL
-                                                               	        THEN e.object_id
-                                                               	        ELSE l.object_id_from_properties
-                                                                    END AS object_id
-                                                               FROM 
-                                                                   etl_editor.mappings m
-                                                               LEFT JOIN object_editor.entities e ON e.id = m.target_field_id
-                                                               LEFT JOIN (
-                                                                    SELECT
-                                                                        id,
-                                                                        -- Извлекаем значение object_id из массива JSON
-                                                                        (
-                                                                            SELECT (elem->>'value')::integer
-                                                                            FROM jsonb_array_elements(properties) AS elem
-                                                                            WHERE elem->>'id' = 'object_id'
-                                                                            LIMIT 1
-                                                                        ) AS object_id_from_properties
-                                                                    FROM etl_editor.loaders
-                                                                ) l ON l.id = m.loader_id
-                                                               WHERE m.task_id = {_connectionParams.TaskId}
+                                                             m.id, 
+                                                             m.source_column,
+                                                             CASE 
+                                                             	WHEN m.element_type_id = 'element' AND m.parent_id IS NULL 
+                                                             	THEN 'array'
+                                                             	ELSE m.element_type_id
+                                                         	END AS element_type_id,
+                                                             m.parent_id,
+                                                             CASE 
+                                                             	WHEN m.target_field_id IS NOT NULL
+                                                             	THEN m.target_field_id
+                                                             	ELSE l.xref_id_from_properties
+                                                             END AS target_field_id,
+                                                             CASE 
+                                                             	WHEN m.element_type_id = 'element' AND m.parent_id IS NULL 
+                                                             	THEN t.loader_id
+                                                             	ELSE m.loader_id
+                                                             END AS loader_id,
+                                                             m.value,
+                                                             CASE 
+                                                        	        WHEN e.object_id IS NOT NULL
+                                                        	        THEN e.object_id
+                                                        	        ELSE l.object_id_from_properties
+                                                             END AS object_id
+                                                        FROM 
+                                                            etl_editor.mappings m
+                                                        LEFT JOIN etl_editor.tasks t ON t.id = {_connectionParams.TaskId}
+                                                        LEFT JOIN object_editor.entities e ON e.id = m.target_field_id
+                                                        LEFT JOIN (
+                                                            SELECT
+                                                                 id,
+                                                                 -- Извлекаем значение object_id из массива JSON
+                                                                 (
+                                                                     SELECT (elem->>'value')::integer
+                                                                     FROM jsonb_array_elements(properties) AS elem
+                                                                     WHERE elem->>'id' = 'object_id'
+                                                                     LIMIT 1
+                                                                 ) AS object_id_from_properties,
+                                                                 (
+                                                                     SELECT (elem->>'value')::integer
+                                                                     FROM jsonb_array_elements(properties) AS elem
+                                                                     WHERE elem->>'id' = 'xref_id'
+                                                                     LIMIT 1
+                                                                 ) AS xref_id_from_properties
+                                                             FROM etl_editor.loaders
+                                                         ) l ON l.id = m.loader_id
+                                                         	OR 
+                                                         	m.element_type_id = 'element' AND m.parent_id IS NULL AND t.loader_id = l.id
+                                                        WHERE m.task_id = {_connectionParams.TaskId}
+                                                        ORDER BY m.id
                                                         """, connection))
                 using (var reader = command.ExecuteReader())
                 {

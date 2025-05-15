@@ -21,7 +21,7 @@ public class BuildXmlMappingQueryHandler
         using var reader = XmlReader.Create(fileStream,
             new XmlReaderSettings() { IgnoreComments = true, IgnoreWhitespace = true });
 
-        Dictionary<string, (int ObjectId, int TargetFieldId)> dicTag2DbData =
+        Dictionary<string, (int ObjectId, int TargetFieldId, bool isArrayElement)> dicTag2DbData =
             FileManager.LoadDictionaryStringKey("D:\\Работа\\dev\\Etl\\Etl\\FILE_STORAGE\\rgis\\dictionary.json");
 
         var classAttrs = dicTag2DbData.Values
@@ -46,10 +46,10 @@ public class BuildXmlMappingQueryHandler
 
                 if (dicTag2DbData.TryGetValue(currentPath, out var matchingEntry))
                 {
-                    var (objectId, targetFieldId) = matchingEntry;
+                    var (objectId, targetFieldId, isArrayElement) = matchingEntry;
 
                     // Проверка условий создания нового объекта
-                    if (targetFieldId == 0 && objectId > 0)
+                    if (isArrayElement)
                     {
                         // Создаем новый экземпляр класса
                         var type = typeMap[objectId];
@@ -83,8 +83,9 @@ public class BuildXmlMappingQueryHandler
                     // При возврате назад выходим из текущего объекта, если objectId совпадает
                     int objId = GetObjectId(dicTag2DbData, currentPath);
                     int fieldId = GetTargetFieldId(dicTag2DbData, currentPath);
+                    bool isArrayElement = GetIsArrayElement(dicTag2DbData, currentPath);
 
-                    if (nodeStack.Count > 0 && nodeStack.Peek().objectId == objId && fieldId == 0)
+                    if (nodeStack.Count > 0 && isArrayElement)
                     {
                         nodeStack.Pop();
                     }
@@ -124,18 +125,25 @@ public class BuildXmlMappingQueryHandler
         bool EndsWithS(string name) =>
             name.EndsWith("s", StringComparison.OrdinalIgnoreCase);
 
-        int GetObjectId(Dictionary<string, (int ObjectId, int TargetFieldId)> dic, string path)
+        int GetObjectId(Dictionary<string, (int ObjectId, int TargetFieldId, bool isArrayElement)> dic, string path)
         {
             if (dic.TryGetValue(path, out var val))
                 return val.ObjectId;
             return 0;
         }
 
-        int GetTargetFieldId(Dictionary<string, (int ObjectId, int TargetFieldId)> dic, string path)
+        int GetTargetFieldId(Dictionary<string, (int ObjectId, int TargetFieldId, bool isArrayElement)> dic, string path)
         {
             if (dic.TryGetValue(path, out var val))
                 return val.TargetFieldId;
             return 0;
+        }
+        
+        bool GetIsArrayElement(Dictionary<string, (int ObjectId, int TargetFieldId, bool isArrayElement)> dic, string path)
+        {
+            if (dic.TryGetValue(path, out var val))
+                return val.isArrayElement;
+            return false;
         }
     }
 }

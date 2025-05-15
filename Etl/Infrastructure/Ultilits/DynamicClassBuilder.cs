@@ -18,13 +18,17 @@ public static class DynamicClassBuilder
             int classId = pair.Key;
             var attrIds = pair.Value;
 
-            string className = $"Object_{classId}_";
+            string className = $"object_{classId}_";
             var tb = moduleBuilder.DefineType(className, TypeAttributes.Public | TypeAttributes.Class);
 
             foreach (var attrId in attrIds)
             {
-                string fieldName = $"attr_{attrId}_";
-                tb.DefineField(fieldName, typeof(string), FieldAttributes.Public);
+                // 0 там, где target_field_id отсутствует, встречается только у корневого элемента xml, т.к. у него есть loader, но ссылка на верхний реестр отсутствует
+                if (attrId != 0)
+                {
+                    string fieldName = $"attr_{attrId}_";
+                    tb.DefineField(fieldName, typeof(string), FieldAttributes.Public);
+                }
             }
 
             var t = tb.CreateType();

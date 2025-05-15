@@ -103,31 +103,32 @@ namespace Etl.Infrastructure.Utilities
            return dict;
        }
        
-       public static void SaveDictionaryStringKey(Dictionary<string, (int, int)>? res, string filePath)
+       public static void SaveDictionaryStringKey(Dictionary<string, (int, int, bool)>? res, string filePath)
        {
            if (res == null)
                return;
 
            var data = res.Select(kvp => new DictEntryStringKey {
-               Path = kvp.Key, // Просто сохраняем строковый путь
-               Item1 = kvp.Value.Item1,
-               Item2 = kvp.Value.Item2
+               Path = kvp.Key,
+               ObjectId = kvp.Value.Item1,  // First int in tuple (Item1)
+               TargetFieldId = kvp.Value.Item2,  // Second int in tuple (Item2)
+               IsArray = kvp.Value.Item3  // bool in tuple (Item3)
            }).ToList();
 
            var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
            File.WriteAllText(filePath, json);
        }
 
-       public static Dictionary<string, (int, int)> LoadDictionaryStringKey(string filePath)
+       public static Dictionary<string, (int, int, bool)> LoadDictionaryStringKey(string filePath)
        {
            var json = File.ReadAllText(filePath);
            var data = JsonSerializer.Deserialize<List<DictEntryStringKey>>(json)!;
-           var dict = new Dictionary<string, (int, int)>();
+           var dict = new Dictionary<string, (int, int,bool)>();
 
            foreach (var entry in data)
            {
                // Просто добавляем запись с строковым ключом
-               dict[entry.Path!] = (entry.Item1, entry.Item2);
+               dict[entry.Path!] = (entry.ObjectId, entry.TargetFieldId, entry.IsArray);
            }
            return dict;
        }
@@ -141,8 +142,9 @@ namespace Etl.Infrastructure.Utilities
    public class DictEntryStringKey
    {
        public string? Path { get; set; }  // Изменили название с StackValues на Path
-       public int Item1 { get; set; }
-       public int Item2 { get; set; }
+       public int ObjectId  { get; set; }
+       public int TargetFieldId { get; set; }
+       public bool IsArray { get; set; }
    }
    
    
